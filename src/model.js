@@ -1,0 +1,15 @@
+export const STORAGE_KEY='pawtrack:v1';
+export function localDate(date=new Date()){return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;}
+export function shiftDate(date,days){const d=new Date(`${date}T12:00:00`);d.setDate(d.getDate()+days);return localDate(d);}
+export function daysUntil(date,today=localDate()){return Math.round((Date.parse(`${date}T12:00:00Z`)-Date.parse(`${today}T12:00:00Z`))/86400000);}
+export function makeSeed(today=localDate()){
+ const ago=n=>shiftDate(today,-n);
+ const pets=[{id:'momo',name:'糯米',species:'猫',breed:'英国短毛猫',gender:'女孩',birthday:shiftDate(today,-430),avatar:'🐱'},{id:'cookie',name:'曲奇',species:'狗',breed:'柯基',gender:'男孩',birthday:shiftDate(today,-710),avatar:'🐶'}];
+ const records=pets.flatMap((p,i)=>[...Array.from({length:6},(_,j)=>({id:`${p.id}-w${j}`,petId:p.id,type:'weight',label:'体重记录',value:Number(((i?9.2:3.2)+j*.12).toFixed(2)),date:ago(150-j*30),note:j===5?'今天也有好好长大':''})),{id:`${p.id}-v`,petId:p.id,type:'vaccine',label:i?'年度疫苗':'猫三联加强针',date:ago(350),nextDate:shiftDate(today,15),note:'下次时间为演示，请以兽医建议为准'},{id:`${p.id}-d`,petId:p.id,type:'deworm',label:'体外驱虫',date:ago(25),nextDate:shiftDate(today,5),note:'按兽医建议记录计划日期'}]);
+ const scenes=[['小满','上海','徐汇区','🐕','周末一起去草地撒欢，快乐原来这么简单。','草地撒欢','park','dog'],['阿橙','上海','浦东新区','🐈','晒太阳的午后，被这个毛茸茸的小家伙治愈了。','午后小憩','sun','cat'],['一颗栗子','杭州','西湖区','🐶','第一次和栗子出门露营，收获一整个相册！','一起出发','camp','dog'],['椰子妈妈','上海','徐汇区','🐱','记录今天的称重，椰子终于乖乖站上体重秤啦。','成长日记','home','cat'],['小林','北京','朝阳区','🐕','今天解锁了新路线，走慢一点，陪伴多一点。','散步日常','walk','dog'],['团团','上海','静安区','🐈','领养一周年，谢谢你成为我的家人。','家的温度','sun','cat']];
+ const posts=scenes.map((s,i)=>({id:`post-${i}`,authorId:`friend-${i}`,author:s[0],city:s[1],district:s[2],avatar:s[3],content:s[4],title:s[5],scene:s[6],animal:s[7],likes:18+i*7,liked:false,createdAt:ago(i),petId:null,image:null}));
+ const friends=scenes.map((s,i)=>({id:`friend-${i}`,nickname:s[0],city:s[1],district:s[2],avatar:s[3],pet:i%2?'猫咪':'狗狗',bio:['喜欢公园散步，寻找一起遛狗的伙伴','分享养宠的小确幸，交流日常护理'][i%2],distance:[1.2,3.6,8.2,2.1,5.4,.8][i],followed:false}));
+ return {version:1,user:{id:'me',nickname:'糯米的家长',city:'上海',district:'徐汇区',avatar:'🌿'},pets,records,posts,friends};
+}
+export function validState(s){return s?.version===1&&typeof s.user?.nickname==='string'&&typeof s.user?.city==='string'&&Array.isArray(s.pets)&&s.pets.length>0&&s.pets.every(p=>p.id&&p.name&&p.birthday)&&Array.isArray(s.records)&&s.records.every(r=>r.id&&r.petId&&r.date)&&Array.isArray(s.posts)&&s.posts.every(p=>p.id&&p.createdAt&&typeof p.content==='string')&&Array.isArray(s.friends);}
+export function timeline(state,petId){const pet=state.pets.find(p=>p.id===petId);return [...state.records.filter(r=>r.petId===petId).map(r=>({...r,kind:r.type})),...state.posts.filter(p=>p.petId===petId).map(p=>({...p,date:p.createdAt,label:'分享了新日常',kind:'post',note:p.content})),{id:`birthday-${petId}`,date:pet.birthday,label:`${pet.name}出生啦`,kind:'birthday',note:'故事从这一天开始'}].sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));}

@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {makeSeed,timeline,daysUntil,shiftDate,validState} from '../src/model.js';
+test('seed includes two pets and complete records relative to visit date',()=>{const s=makeSeed('2026-10-09');assert.ok(validState(s));assert.equal(s.pets.length,2);assert.equal(s.posts.length,6);assert.equal(s.records.filter(r=>r.type==='weight').length,12);assert.equal(s.records.find(r=>r.type==='deworm').nextDate,'2026-10-14');});
+test('due calculation handles overdue, today, leap year and month rollover',()=>{assert.equal(daysUntil('2026-10-08','2026-10-09'),-1);assert.equal(daysUntil('2026-10-09','2026-10-09'),0);assert.equal(shiftDate('2024-02-28',1),'2024-02-29');assert.equal(shiftDate('2026-12-31',1),'2027-01-01');});
+test('timeline isolates a pet and aggregates its post, health and birthday in reverse date order',()=>{const s=makeSeed('2026-10-09');s.posts.push({id:'mine',petId:'momo',createdAt:'2026-10-09',content:'今日成长'});const rows=timeline(s,'momo');assert.equal(rows.length,10);assert.ok(rows.some(r=>r.kind==='post'&&r.note==='今日成长'));assert.equal(rows.at(-1).kind,'birthday');assert.ok(rows.every(r=>!r.petId||r.petId==='momo'));for(let i=1;i<rows.length;i++)assert.ok(rows[i-1].date>=rows[i].date);});
+test('storage schema rejects invalid state',()=>{assert.equal(validState(null),false);assert.equal(validState({version:1}),false);assert.equal(validState({...makeSeed(),pets:[]}),false);assert.ok(validState(JSON.parse(JSON.stringify(makeSeed()))));});
